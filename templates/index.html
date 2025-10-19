@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #222;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #f5f5f5;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .mode-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #444;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 1.1em;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            color: #f5f5f5;
+            border-bottom-color: #f5f5f5;
+        }
+
+        .tab-button:hover {
+            color: #f5f5f5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #666;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background-color: #2a2a2a;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #f5f5f5;
+        }
+
+        .upload-area.dragover {
+            border-color: #f5f5f5;
+            background-color: #3a3a3a;
+        }
+
+        .upload-text {
+            font-size: 1.1em;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            background-color: #3a3a3a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        #batchFileInfo, #csvFileInfo {
+            background-color: #3a3a3a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #f5f5f5;
+        }
+
+        textarea, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            background-color: #2a2a2a;
+            color: #f5f5f5;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        textarea:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: #f5f5f5;
+        }
+
+        .orientation-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .radio-option {
+            flex: 1;
+        }
+
+        .radio-option input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .radio-option label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #2a2a2a;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            border-color: #f5f5f5;
+            background-color: #3a3a3a;
+        }
+
+        .process-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #f5f5f5;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            background-color: #e0e0e0;
+        }
+
+        .process-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #444;
+            border-top: 4px solid #f5f5f5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background-color: #4a2c2c;
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .success {
+            background-color: #2c4a2c;
+            color: #6bff6b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            display: none;
+            border-left: 4px solid #6bff6b;
+        }
+
+        #fileInput, #csvInput, #batchVideoInput {
+            display: none;
+        }
+
+        .video-preview {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .video-preview video {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #666;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .download-btn:hover {
+            background-color: #888;
+        }
+
+        .batch-results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .batch-item {
+            background-color: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #666;
+        }
+
+        .batch-item.success {
+            border-left-color: #6bff6b;
+        }
+
+        .batch-item.error {
+            border-left-color: #ff6b6b;
+        }
+
+        .batch-item h4 {
+            margin-bottom: 10px;
+            color: #f5f5f5;
+        }
+
+        .batch-item video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 5px;
+        }
+
+        .batch-progress {
+            background-color: #444;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .batch-progress-bar {
+            height: 20px;
+            background-color: #f5f5f5;
+            width: 0%;
+            transition: width 0.3s ease;
+            text-align: center;
+            line-height: 20px;
+            color: #333;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .orientation-group {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .mode-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video Processor</h1>
+        
+        <div class="mode-tabs">
+            <button class="tab-button active" onclick="switchTab('single')">Single Video</button>
+            <button class="tab-button" onclick="switchTab('batch')">Batch Processing (CSV)</button>
+        </div>
+
+        <!-- Single Video Tab -->
+        <div id="singleTab" class="tab-content active">
+            <form id="videoForm" enctype="multipart/form-data">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-text">Drag and drop a video file here or click to select</div>
+                    <div style="font-size: 0.9em; color: #888;">Supported: MP4, AVI, MOV, MKV, WebM</div>
+                    <input type="file" id="fileInput" name="video" accept="video/*">
+                </div>
+                
+                <div class="file-info" id="fileInfo">
+                    <strong>Selected file:</strong>
+                    <span id="fileName"></span>
+                    <span id="fileSize"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="prompt">Describe the transformation you want:</label>
+                    <textarea id="prompt" name="prompt" placeholder="Example: Replace the human with a robot character with glowing blue eyes..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Video orientation:</label>
+                    <div class="orientation-group">
+                        <div class="radio-option">
+                            <input type="radio" id="landscape" name="orientation" value="landscape" checked>
+                            <label for="landscape">Landscape (1280x704)</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="portrait" name="orientation" value="portrait">
+                            <label for="portrait">Portrait (704x1280)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="process-btn" id="processBtn">
+                    Process Video
+                </button>
+            </form>
+        </div>
+
+        <!-- Batch Processing Tab -->
+        <div id="batchTab" class="tab-content">
+            <form id="batchForm" enctype="multipart/form-data">
+                <div class="upload-area" id="batchUploadArea">
+                    <div class="upload-text">Drag and drop a video file here or click to select</div>
+                    <div style="font-size: 0.9em; color: #888;">Supported: MP4, AVI, MOV, MKV, WebM</div>
+                    <input type="file" id="batchVideoInput" name="video" accept="video/*">
+                </div>
+                
+                <div class="file-info" id="batchFileInfo">
+                    <strong>Selected video:</strong>
+                    <span id="batchFileName"></span>
+                    <span id="batchFileSize"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="csvInput">Select CSV file (prompts in first column):</label>
+                    <input type="file" id="csvInput" name="csv_file" accept=".csv" required>
+                </div>
+                
+                <div class="file-info" id="csvFileInfo">
+                    <strong>Selected CSV:</strong>
+                    <span id="csvFileName"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Video orientation:</label>
+                    <div class="orientation-group">
+                        <div class="radio-option">
+                            <input type="radio" id="batchLandscape" name="batch_orientation" value="landscape" checked>
+                            <label for="batchLandscape">Landscape (1280x704)</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="batchPortrait" name="batch_orientation" value="portrait">
+                            <label for="batchPortrait">Portrait (704x1280)</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="process-btn" id="batchProcessBtn">
+                    Process Batch
+                </button>
+            </form>
+
+            <div class="batch-progress" id="batchProgress" style="display: none;">
+                <div class="batch-progress-bar" id="batchProgressBar">0%</div>
+            </div>
+
+            <div class="batch-results" id="batchResults">
+                <h3>Batch Results:</h3>
+                <div id="batchResultsList"></div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div id="loadingText">Processing video... This may take several minutes</div>
+        </div>
+        
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+        
+        <div class="video-preview" id="videoPreview">
+            <h3>Processed Video:</h3>
+            <video id="resultVideo" controls>
+                Your browser does not support the video tag.
+            </video>
+            <br>
+            <a id="downloadLink" class="download-btn" download>Download Video</a>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            hideMessages();
+            document.getElementById('videoPreview').style.display = 'none';
+            document.getElementById('batchResults').style.display = 'none';
+            
+            // Hide file info sections
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('batchFileInfo').style.display = 'none';
+            document.getElementById('csvFileInfo').style.display = 'none';
+        }
+
+        // Single video functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const form = document.getElementById('videoForm');
+        const processBtn = document.getElementById('processBtn');
+        const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
+        const error = document.getElementById('error');
+        const success = document.getElementById('success');
+        const promptTextarea = document.getElementById('prompt');
+        const videoPreview = document.getElementById('videoPreview');
+        const resultVideo = document.getElementById('resultVideo');
+        const downloadLink = document.getElementById('downloadLink');
+
+        // Batch processing elements
+        const batchForm = document.getElementById('batchForm');
+        const batchProcessBtn = document.getElementById('batchProcessBtn');
+        const batchProgress = document.getElementById('batchProgress');
+        const batchProgressBar = document.getElementById('batchProgressBar');
+        const batchResults = document.getElementById('batchResults');
+        const batchResultsList = document.getElementById('batchResultsList');
+
+        // Batch drag & drop elements
+        const batchUploadArea = document.getElementById('batchUploadArea');
+        const batchVideoInput = document.getElementById('batchVideoInput');
+        const batchFileInfo = document.getElementById('batchFileInfo');
+        const batchFileName = document.getElementById('batchFileName');
+        const batchFileSize = document.getElementById('batchFileSize');
+        const csvInput = document.getElementById('csvInput');
+        const csvFileInfo = document.getElementById('csvFileInfo');
+        const csvFileName = document.getElementById('csvFileName');
+
+        let selectedFile = null;
+        let selectedBatchVideo = null;
+        let selectedCsvFile = null;
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // Batch drag and drop functionality
+        batchUploadArea.addEventListener('click', () => batchVideoInput.click());
+        
+        batchUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            batchUploadArea.classList.add('dragover');
+        });
+        
+        batchUploadArea.addEventListener('dragleave', () => {
+            batchUploadArea.classList.remove('dragover');
+        });
+        
+        batchUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            batchUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleBatchVideoSelect(files[0]);
+            }
+        });
+        
+        batchVideoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleBatchVideoSelect(e.target.files[0]);
+            }
+        });
+
+        csvInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleCsvSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = `(${formatFileSize(file.size)})`;
+            fileInfo.style.display = 'block';
+            hideMessages();
+            videoPreview.style.display = 'none';
+        }
+
+        function handleBatchVideoSelect(file) {
+            selectedBatchVideo = file;
+            batchFileName.textContent = file.name;
+            batchFileSize.textContent = `(${formatFileSize(file.size)})`;
+            batchFileInfo.style.display = 'block';
+            hideMessages();
+            batchResults.style.display = 'none';
+        }
+
+        function handleCsvSelect(file) {
+            selectedCsvFile = file;
+            csvFileName.textContent = file.name;
+            csvFileInfo.style.display = 'block';
+            hideMessages();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showError(message) {
+            hideMessages();
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+
+        function showSuccess(message) {
+            hideMessages();
+            success.textContent = message;
+            success.style.display = 'block';
+        }
+
+        function hideMessages() {
+            error.style.display = 'none';
+            success.style.display = 'none';
+        }
+
+        function showLoading(show, text = 'Processing video... This may take several minutes') {
+            loading.style.display = show ? 'block' : 'none';
+            loadingText.textContent = text;
+            processBtn.disabled = show;
+            batchProcessBtn.disabled = show;
+            if (show) {
+                processBtn.textContent = 'Processing...';
+                batchProcessBtn.textContent = 'Processing...';
+            } else {
+                processBtn.textContent = 'Process Video';
+                batchProcessBtn.textContent = 'Process Batch';
+            }
+        }
+
+        function showVideoPreview(videoUrl) {
+            resultVideo.src = videoUrl;
+            downloadLink.href = videoUrl;
+            videoPreview.style.display = 'block';
+            showSuccess('Video processed successfully!');
+        }
+
+        // Single video form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedFile) {
+                showError('Please select a video file');
+                return;
+            }
+            
+            const prompt = promptTextarea.value.trim();
+            if (!prompt) {
+                showError('Please enter a transformation description');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', selectedFile);
+            formData.append('prompt', prompt);
+            formData.append('orientation', document.querySelector('input[name="orientation"]:checked').value);
+            
+            showLoading(true);
+            hideMessages();
+            videoPreview.style.display = 'none';
+            
+            try {
+                const response = await fetch('/process_video', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    showVideoPreview(result.video_url);
+                } else {
+                    showError(result.error || 'Error processing video');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Batch processing form submission
+        batchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!selectedBatchVideo) {
+                showError('Please select a video file');
+                return;
+            }
+            
+            if (!selectedCsvFile) {
+                showError('Please select a CSV file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', selectedBatchVideo);
+            formData.append('csv_file', selectedCsvFile);
+            formData.append('orientation', document.querySelector('input[name="batch_orientation"]:checked').value);
+            
+            showLoading(true, 'Processing batch... This may take several minutes per video');
+            hideMessages();
+            batchResults.style.display = 'none';
+            batchProgress.style.display = 'block';
+            batchProgressBar.style.width = '0%';
+            batchProgressBar.textContent = '0%';
+            
+            try {
+                const response = await fetch('/process_csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    displayBatchResults(result.results);
+                    showSuccess(`Batch processing completed! ${result.results.filter(r => r.success).length} videos processed successfully.`);
+                } else {
+                    showError(result.error || 'Error processing batch');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                showLoading(false);
+                batchProgress.style.display = 'none';
+            }
+        });
+
+        function displayBatchResults(results) {
+            batchResultsList.innerHTML = '';
+            batchResults.style.display = 'block';
+            
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = `batch-item ${result.success ? 'success' : 'error'}`;
+                
+                if (result.success) {
+                    item.innerHTML = `
+                        <h4>Prompt ${index + 1}: "${result.prompt}"</h4>
+                        <p>Output file: ${result.output_file}</p>
+                        <video controls style="width: 100%; max-width: 400px; margin-top: 10px;">
+                            <source src="${result.video_url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <br>
+                        <a href="${result.video_url}" class="download-btn" download style="margin-top: 10px;">Download</a>
+                    `;
+                } else {
+                    item.innerHTML = `
+                        <h4>Prompt ${index + 1}: "${result.prompt}"</h4>
+                        <p style="color: #ff6b6b;">Error: ${result.error}</p>
+                    `;
+                }
+                
+                batchResultsList.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>
